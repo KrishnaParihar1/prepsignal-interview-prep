@@ -42,8 +42,8 @@ async function generateInterviewReport({ resume, selfDescription, jobDescription
 
 
     const prompt = `Generate an interview report for a candidate with the following details:
-                        Resume: ${resume}
-                        Self Description: ${selfDescription}
+                        Resume: ${resume || "Not provided"}
+                        Self Description: ${selfDescription || "Not provided"}
                         Job Description: ${jobDescription}
 `
 
@@ -64,22 +64,18 @@ async function generateInterviewReport({ resume, selfDescription, jobDescription
 
 
 async function generatePdfFromHtml(htmlContent) {
-    const browser = await puppeteer.launch()
-    const page = await browser.newPage();
-    await page.setContent(htmlContent, { waitUntil: "networkidle0" })
-
-    const pdfBuffer = await page.pdf({
-        format: "A4", margin: {
-            top: "20mm",
-            bottom: "20mm",
-            left: "15mm",
-            right: "15mm"
-        }
-    })
-
-    await browser.close()
-
-    return pdfBuffer
+    const browser = await puppeteer.launch({ args: ["--no-sandbox", "--disable-setuid-sandbox"] })
+    try {
+        const page = await browser.newPage()
+        await page.setJavaScriptEnabled(false)
+        await page.setContent(htmlContent, { waitUntil: "load", timeout: 30000 })
+        return await page.pdf({
+            format: "A4",
+            margin: { top: "20mm", bottom: "20mm", left: "15mm", right: "15mm" }
+        })
+    } finally {
+        await browser.close()
+    }
 }
 
 async function generateResumePdf({ resume, selfDescription, jobDescription }) {
@@ -89,8 +85,8 @@ async function generateResumePdf({ resume, selfDescription, jobDescription }) {
     })
 
     const prompt = `Generate resume for a candidate with the following details:
-                        Resume: ${resume}
-                        Self Description: ${selfDescription}
+                        Resume: ${resume || "Not provided"}
+                        Self Description: ${selfDescription || "Not provided"}
                         Job Description: ${jobDescription}
 
                         the response should be a JSON object with a single field "html" which contains the HTML content of the resume which can be converted to PDF using any library like puppeteer.

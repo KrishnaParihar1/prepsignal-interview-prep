@@ -1,4 +1,11 @@
 require("dotenv").config();
+
+const requiredEnv = ["MONGO_URI", "JWT_SECRET", "GOOGLE_GENAI_API_KEY"];
+const missingEnv = requiredEnv.filter((key) => !process.env[key]);
+if (missingEnv.length) {
+  console.error(`Missing required env vars: ${missingEnv.join(", ")}`);
+  process.exit(1);
+}
 const app = require("./src/app");
 const connectToDB = require("./src/config/database");
 

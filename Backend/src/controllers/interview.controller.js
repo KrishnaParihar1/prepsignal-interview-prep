@@ -1,3 +1,4 @@
+const mongoose = require("mongoose");
 const pdfParse = require("pdf-parse");
 const {
   generateInterviewReport,
@@ -9,27 +10,35 @@ const interviewReportModel = require("../models/interviewReport.model");
  * @description Controller to generate interview report based on user self description, resume and job description.
  */
 async function generateInterViewReportController(req, res) {
+  const jobDescription = typeof req.body.jobDescription === "string" ? req.body.jobDescription.trim() : "";
+  const selfDescription = typeof req.body.selfDescription === "string" ? req.body.selfDescription.trim() : "";
+
+  if (jobDescription.length > 5000 || selfDescription.length > 3000) {
+    return res.status(400).json({ message: "Job description (max 5000 chars) or self description (max 3000 chars) is too long" });
+  }
+
   let resumeText = "";
   if (req.file) {
-    const parsed = await new pdfParse.PDFParse({
-      data: Uint8Array.from(req.file.buffer),
-    }).getText();
-    resumeText = parsed.text;
+    const parser = new pdfParse.PDFParse({ data: Uint8Array.from(req.file.buffer) });
+    try {
+      resumeText = (await parser.getText()).text;
+    } catch {
+      return res.status(400).json({ message: "Could not read the uploaded PDF" });
+    } finally {
+      await parser.destroy();
+    }
   }
-  const { selfDescription, jobDescription } = req.body;
-  if (!jobDescription || (!resumeText && !selfDescription)) {
-    return res
-      .status(400)
-      .json({
-        message:
-          "Job description and a resume or self description are required",
-      });
+
+  if (!jobDescription || (!resumeText.trim() && !selfDescription)) {
+    return res.status(400).json({ message: "Job description and a resume or self description are required" });
   }
   const interViewReportByAi = await generateInterviewReport({
     resume: resumeText,
     selfDescription,
     jobDescription,
   });
+
+  interViewReportByAi.matchScore = Math.min(100, Math.max(0, Math.round(Number(interViewReportByAi.matchScore) || 0)));
 
   const interviewReport = await interviewReportModel.create({
     user: req.user.id,
@@ -50,6 +59,10 @@ async function generateInterViewReportController(req, res) {
  */
 async function getInterviewReportByIdController(req, res) {
   const { interviewId } = req.params;
+
+  if (!mongoose.isValidObjectId(interviewId)) {
+    return res.status(404).json({ message: "Interview report not found." });
+  }
 
   const interviewReport = await interviewReportModel.findOne({
     _id: interviewId,
@@ -90,6 +103,10 @@ async function getAllInterviewReportsController(req, res) {
  */
 async function generateResumePdfController(req, res) {
   const { interviewReportId } = req.params;
+
+  if (!mongoose.isValidObjectId(interviewReportId)) {
+    return res.status(404).json({ message: "Interview report not found." });
+  }
 
   const interviewReport = await interviewReportModel.findOne({
     _id: interviewReportId,

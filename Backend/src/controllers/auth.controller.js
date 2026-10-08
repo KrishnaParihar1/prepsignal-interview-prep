@@ -9,32 +9,32 @@ const tokenBlacklistModel = require("../models/blacklist.model");
  * @access Public
  */
 async function registerUserController(req, res) {
-  const { username, email, password } = req.body;
-  if (!email || !password)
-    return res.status(400).json({ message: "Email and password required" });
-  if (!username || !email || !password) {
-    return res.status(400).json({
-      message: "Please provide username, email and password",
-    });
+  const { password } = req.body
+  const username = typeof req.body.username === "string" ? req.body.username.trim() : ""
+  const email = typeof req.body.email === "string" ? req.body.email.trim().toLowerCase() : ""
+
+  if (!username || !email || typeof password !== "string" || !password) {
+    return res.status(400).json({ message: "Please provide username, email and password" })
   }
-
-  const isUserAlreadyExists = await userModel.findOne({
-    $or: [{ username }, { email }],
-  });
-
-  if (isUserAlreadyExists) {
-    return res.status(400).json({
-      message: "Account already exists with this email address or username",
-    });
+  if (password.length < 8) {
+    return res.status(400).json({ message: "Password must be at least 8 characters" })
   }
 
   const hash = await bcrypt.hash(password, 10);
 
-  const user = await userModel.create({
-    username,
-    email,
-    password: hash,
-  });
+  let user;
+  try {
+    user = await userModel.create({
+      username,
+      email,
+      password: hash,
+    });
+  } catch (err) {
+    if (err.code === 11000) {
+      return res.status(400).json({ message: "Account already exists with this email address or username" });
+    }
+    throw err;
+  }
 
   const token = jwt.sign(
     { id: user._id, username: user.username },
@@ -65,7 +65,12 @@ async function registerUserController(req, res) {
  * @access Public
  */
 async function loginUserController(req, res) {
-  const { email, password } = req.body;
+  const { password } = req.body
+  const email = typeof req.body.email === "string" ? req.body.email.trim().toLowerCase() : ""
+
+  if (!email || typeof password !== "string" || !password) {
+    return res.status(400).json({ message: "Email and password required" })
+  }
 
   const user = await userModel.findOne({ email });
 
@@ -131,6 +136,10 @@ async function logoutUserController(req, res) {
  */
 async function getMeController(req, res) {
   const user = await userModel.findById(req.user.id);
+
+  if (!user) {
+    return res.status(404).json({ message: "User not found" })
+  }
 
   res.status(200).json({
     message: "User details fetched successfully",

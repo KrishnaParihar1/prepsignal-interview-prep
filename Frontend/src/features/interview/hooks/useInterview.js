@@ -1,11 +1,9 @@
-import { getAllInterviewReports, generateInterviewReport, getInterviewReportById, generateResumePdf } from "../services/interview.api"
 import { useContext, useEffect } from "react"
-import { InterviewContext } from "../interview.context"
 import { useParams } from "react-router"
-
+import { InterviewContext } from "../interviewContext"
+import { getAllInterviewReports, generateInterviewReport, getInterviewReportById, generateResumePdf } from "../services/interview.api"
 
 export const useInterview = () => {
-
     const context = useContext(InterviewContext)
     const { interviewId } = useParams()
 
@@ -13,31 +11,32 @@ export const useInterview = () => {
         throw new Error("useInterview must be used within an InterviewProvider")
     }
 
-    const { loading, setLoading, report, setReport, reports, setReports } = context
+    const { loading, setLoading, report, setReport, reports, setReports, error, setError } = context
 
     const generateReport = async ({ jobDescription, selfDescription, resumeFile }) => {
         setLoading(true)
+        setError(null)
         let response = null
         try {
             response = await generateInterviewReport({ jobDescription, selfDescription, resumeFile })
             setReport(response.interviewReport)
-        } catch (error) {
-            console.log(error)
+        } catch (err) {
+            setError(err.response?.data?.message || "Unable to generate your interview plan. Please try again.")
         } finally {
             setLoading(false)
         }
-
         return response?.interviewReport ?? null
     }
 
-    const getReportById = async (interviewId) => {
+    const getReportById = async (id) => {
         setLoading(true)
+        setError(null)
         let response = null
         try {
-            response = await getInterviewReportById(interviewId)
+            response = await getInterviewReportById(id)
             setReport(response.interviewReport)
-        } catch (error) {
-            console.log(error)
+        } catch (err) {
+            setError(err.response?.data?.message || "Unable to load this interview plan.")
         } finally {
             setLoading(false)
         }
@@ -46,33 +45,34 @@ export const useInterview = () => {
 
     const getReports = async () => {
         setLoading(true)
+        setError(null)
         let response = null
         try {
             response = await getAllInterviewReports()
             setReports(response.interviewReports)
-        } catch (error) {
-            console.log(error)
+        } catch (err) {
+            setError(err.response?.data?.message || "Unable to load your interview plans.")
         } finally {
             setLoading(false)
         }
-
         return response?.interviewReports ?? []
     }
 
     const getResumePdf = async (interviewReportId) => {
         setLoading(true)
-        let response = null
+        setError(null)
         try {
-            response = await generateResumePdf({ interviewReportId })
-            const url = window.URL.createObjectURL(new Blob([ response ], { type: "application/pdf" }))
+            const blob = await generateResumePdf({ interviewReportId })
+            const url = window.URL.createObjectURL(new Blob([blob], { type: "application/pdf" }))
             const link = document.createElement("a")
             link.href = url
             link.setAttribute("download", `resume_${interviewReportId}.pdf`)
             document.body.appendChild(link)
             link.click()
-        }
-        catch (error) {
-            console.log(error)
+            link.remove()
+            window.URL.revokeObjectURL(url)
+        } catch {
+            setError("Unable to generate the resume PDF. Please try again.")
         } finally {
             setLoading(false)
         }
@@ -84,8 +84,8 @@ export const useInterview = () => {
         } else {
             getReports()
         }
-    }, [ interviewId ])
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [interviewId])
 
-    return { loading, report, reports, generateReport, getReportById, getReports, getResumePdf }
-
+    return { loading, error, report, reports, generateReport, getReportById, getReports, getResumePdf }
 }
