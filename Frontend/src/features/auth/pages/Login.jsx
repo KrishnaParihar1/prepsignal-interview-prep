@@ -32,6 +32,7 @@ const Login = () => {
                     <div className="input-group">
                         <label htmlFor="email">Email</label>
                         <input
+                            value={email}
                             required autoComplete="email"
                             onChange={(e) => { setEmail(e.target.value) }}
                             type="email" id="email" name='email' placeholder='Enter email address' />
@@ -39,6 +40,7 @@ const Login = () => {
                     <div className="input-group">
                         <label htmlFor="password">Password</label>
                         <input
+                        value={password}
                             required autoComplete="current-password"
                             onChange={(e) => { setPassword(e.target.value) }}
                             type="password" id="password" name='password' placeholder='Enter password' />

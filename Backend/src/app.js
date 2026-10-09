@@ -10,7 +10,6 @@ const allowedOrigins = (process.env.CLIENT_ORIGIN || "http://localhost:5173,http
     .split(",")
     .map((o) => o.trim())
 
-app.set("trust proxy", 1)
 app.use(cors({ origin: allowedOrigins, credentials: true }))
 
 /* require all the routes here */

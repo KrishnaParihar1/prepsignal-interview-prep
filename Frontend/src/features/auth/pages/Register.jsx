@@ -33,6 +33,7 @@ const Register = () => {
                     <div className="input-group">
                         <label htmlFor="username">Username</label>
                         <input
+                            value={username}
                             required autoComplete="username"
                             onChange={(e) => { setUsername(e.target.value) }}
                             type="text" id="username" name='username' placeholder='Enter username' />
@@ -40,6 +41,7 @@ const Register = () => {
                     <div className="input-group">
                         <label htmlFor="email">Email</label>
                         <input
+                            value={email}
                             required autoComplete="email"
                             onChange={(e) => { setEmail(e.target.value) }}
                             type="email" id="email" name='email' placeholder='Enter email address' />
@@ -47,6 +49,7 @@ const Register = () => {
                     <div className="input-group">
                         <label htmlFor="password">Password</label>
                         <input
+                            value={password}
                             required minLength={8} autoComplete="new-password"
                             onChange={(e) => { setPassword(e.target.value) }}
                             type="password" id="password" name='password' placeholder='Enter password' />

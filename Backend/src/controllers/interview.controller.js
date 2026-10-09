@@ -10,27 +10,56 @@ const interviewReportModel = require("../models/interviewReport.model");
  * @description Controller to generate interview report based on user self description, resume and job description.
  */
 async function generateInterViewReportController(req, res) {
-  const jobDescription = typeof req.body.jobDescription === "string" ? req.body.jobDescription.trim() : "";
-  const selfDescription = typeof req.body.selfDescription === "string" ? req.body.selfDescription.trim() : "";
+  const jobDescription =
+    typeof req.body.jobDescription === "string"
+      ? req.body.jobDescription.trim()
+      : "";
+  const selfDescription =
+    typeof req.body.selfDescription === "string"
+      ? req.body.selfDescription.trim()
+      : "";
 
   if (jobDescription.length > 5000 || selfDescription.length > 3000) {
-    return res.status(400).json({ message: "Job description (max 5000 chars) or self description (max 3000 chars) is too long" });
+    return res
+      .status(400)
+      .json({
+        message:
+          "Job description (max 5000 chars) or self description (max 3000 chars) is too long",
+      });
   }
 
   let resumeText = "";
   if (req.file) {
-    const parser = new pdfParse.PDFParse({ data: Uint8Array.from(req.file.buffer) });
+    const parser = new pdfParse.PDFParse({
+      data: Uint8Array.from(req.file.buffer),
+    });
     try {
-      resumeText = (await parser.getText()).text;
+      resumeText = (await parser.getText({ pageJoiner: "" })).text;
     } catch {
-      return res.status(400).json({ message: "Could not read the uploaded PDF" });
+      return res
+        .status(400)
+        .json({ message: "Could not read the uploaded PDF" });
     } finally {
       await parser.destroy();
     }
   }
 
+  if (req.file && !resumeText.trim() && !selfDescription) {
+    return res
+      .status(400)
+      .json({
+        message:
+          "Could not extract text from this PDF (it may be a scanned image). Add a self description instead.",
+      });
+  }
+
   if (!jobDescription || (!resumeText.trim() && !selfDescription)) {
-    return res.status(400).json({ message: "Job description and a resume or self description are required" });
+    return res
+      .status(400)
+      .json({
+        message:
+          "Job description and a resume or self description are required",
+      });
   }
   const interViewReportByAi = await generateInterviewReport({
     resume: resumeText,
@@ -38,7 +67,10 @@ async function generateInterViewReportController(req, res) {
     jobDescription,
   });
 
-  interViewReportByAi.matchScore = Math.min(100, Math.max(0, Math.round(Number(interViewReportByAi.matchScore) || 0)));
+  interViewReportByAi.matchScore = Math.min(
+    100,
+    Math.max(0, Math.round(Number(interViewReportByAi.matchScore) || 0)),
+  );
 
   const interviewReport = await interviewReportModel.create({
     user: req.user.id,
