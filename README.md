@@ -1,4 +1,4 @@
-# PrepSignal
+# YourNewName
 
 PrepSignal is an AI-powered interview prep platform. Paste a target job description and your resume (or a quick self-description), and it generates a personalized interview strategy: tailored questions, a preparation plan, and a skill-gap report.
 
