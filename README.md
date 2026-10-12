@@ -15,7 +15,7 @@ PrepSignal is an AI-powered interview prep platform. Paste a target job descript
 
 **Frontend:** React (Vite), React Router, SCSS, Axios
 **Backend:** Node.js, Express, MongoDB (Mongoose), JWT, Multer, pdf-parse, Puppeteer
-**AI:** Google Gemini API (`@google/genai`)
+**AI:** Groq API (`groq-sdk`)
 
 ## Project Structure
 
@@ -45,7 +45,7 @@ prepsignal-interview-prep/
 
 - Node.js (v18+ recommended)
 - A [MongoDB Atlas](https://cloud.mongodb.com) cluster (or a local MongoDB)
-- A [Gemini API key](https://aistudio.google.com/apikey)
+- A [Groq API key](https://console.groq.com/keys)
 
 ### 1. Clone the repo
 
@@ -71,9 +71,11 @@ Create a `.env` file inside `Backend/`:
 ```
 MONGO_URI=your_mongodb_connection_string
 JWT_SECRET=your_random_secret
-GOOGLE_GENAI_API_KEY=your_gemini_api_key
+GROQ_API_KEY=your_groq_api_key
+GROQ_MODEL=openai/gpt-oss-120b
 PORT=3000
 ```
+*(Note: `GROQ_MODEL` is optional and can be changed to any model listed in the Groq console)*
 
 ### 4. Run the app
 

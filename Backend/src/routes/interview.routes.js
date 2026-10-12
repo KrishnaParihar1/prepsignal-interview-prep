@@ -14,6 +14,16 @@ const aiLimiter = rateLimit({
   keyGenerator: (req) => req.user.id,
   message: { message: "Too many requests. Please try again in a few minutes." },
 });
+
+const globalAiLimiter = rateLimit({
+    windowMs: 60 * 60 * 1000,
+    limit: 60,
+    keyGenerator: () => "global",
+    skipFailedRequests: true,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: { message: "The demo is very busy right now. Please try again in a bit." },
+});
 const interviewRouter = express.Router();
 
 /**
@@ -24,6 +34,7 @@ const interviewRouter = express.Router();
 interviewRouter.post(
   "/",
   authMiddleware.authUser,
+  globalAiLimiter,
   aiLimiter,
   upload.single("resume"),
   interviewController.generateInterViewReportController,
@@ -59,6 +70,7 @@ interviewRouter.get(
 interviewRouter.post(
   "/resume/pdf/:interviewReportId",
   authMiddleware.authUser,
+  globalAiLimiter,
   aiLimiter,
   interviewController.generateResumePdfController,
 );

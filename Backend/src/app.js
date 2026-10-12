@@ -3,6 +3,7 @@ const cookieParser = require("cookie-parser")
 const cors = require("cors")
 
 const app = express()
+if (process.env.NODE_ENV === "production") app.set("trust proxy", 1)
 
 app.use(express.json())
 app.use(cookieParser())
@@ -20,6 +21,15 @@ const interviewRouter = require("./routes/interview.routes")
 /* using all the routes here */
 app.use("/api/auth", authRouter)
 app.use("/api/interview", interviewRouter)
+
+app.get("/api/health", (req, res) => res.json({ ok: true }))
+
+if (process.env.NODE_ENV === "production") {
+    const path = require("path")
+    const distPath = path.join(__dirname, "../../Frontend/dist")
+    app.use(express.static(distPath))
+    app.get(/^\/(?!api\/).*/, (req, res) => res.sendFile(path.join(distPath, "index.html")))
+}
 
 app.use((err, req, res, next) => {
     console.error(err)

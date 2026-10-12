@@ -1,6 +1,6 @@
 require("dotenv").config();
 
-const requiredEnv = ["MONGO_URI", "JWT_SECRET", "GOOGLE_GENAI_API_KEY"];
+const requiredEnv = ["MONGO_URI", "JWT_SECRET", "GROQ_API_KEY"];
 const missingEnv = requiredEnv.filter((key) => !process.env[key]);
 if (missingEnv.length) {
   console.error(`Missing required env vars: ${missingEnv.join(", ")}`);

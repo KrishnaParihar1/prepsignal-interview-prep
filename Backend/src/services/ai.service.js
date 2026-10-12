@@ -1,18 +1,44 @@
-const { GoogleGenAI } = require("@google/genai")
+const Groq = require("groq-sdk")
 const { z } = require("zod")
 const { zodToJsonSchema } = require("zod-to-json-schema")
 const puppeteer = require("puppeteer")
 
+const GROQ_MODEL = process.env.GROQ_MODEL || "openai/gpt-oss-120b"
+
 function getAiClient() {
-    const apiKey = process.env.GOOGLE_GENAI_API_KEY
+    const apiKey = process.env.GROQ_API_KEY
 
     if (!apiKey) {
-        throw new Error("GOOGLE_GENAI_API_KEY is required for AI features")
+        throw new Error("GROQ_API_KEY is required for AI features")
     }
 
-    return new GoogleGenAI({ apiKey })
+    return new Groq({ apiKey })
 }
 
+async function generateJson({ prompt, schema }) {
+    const jsonSchema = JSON.stringify(zodToJsonSchema(schema))
+
+    for (let attempt = 1; attempt <= 2; attempt++) {
+        const completion = await getAiClient().chat.completions.create({
+            model: GROQ_MODEL,
+            temperature: 0.4,
+            response_format: { type: "json_object" },
+            messages: [
+                {
+                    role: "system",
+                    content: `You are an expert career coach. Respond ONLY with a single valid JSON object that matches this JSON Schema exactly (same field names, correct types, no extra fields). No markdown, no code fences, no text outside the JSON.\n\nJSON Schema:\n${jsonSchema}`
+                },
+                { role: "user", content: prompt }
+            ]
+        })
+
+        try {
+            return schema.parse(JSON.parse(completion.choices[0].message.content))
+        } catch (err) {
+            if (attempt === 2) throw err
+        }
+    }
+}
 
 const interviewReportSchema = z.object({
     matchScore: z.number().describe("A score between 0 and 100 indicating how well the candidate's profile matches the job describe"),
@@ -47,16 +73,7 @@ async function generateInterviewReport({ resume, selfDescription, jobDescription
                         Job Description: ${jobDescription}
 `
 
-    const response = await getAiClient().models.generateContent({
-        model: "gemini-3-flash-preview",
-        contents: prompt,
-        config: {
-            responseMimeType: "application/json",
-            responseSchema: zodToJsonSchema(interviewReportSchema),
-        }
-    })
-
-    return JSON.parse(response.text)
+    return await generateJson({ prompt, schema: interviewReportSchema })
 
 
 }
@@ -97,17 +114,7 @@ async function generateResumePdf({ resume, selfDescription, jobDescription }) {
                         The resume should not be so lengthy, it should ideally be 1-2 pages long when converted to PDF. Focus on quality rather than quantity and make sure to include all the relevant information that can increase the candidate's chances of getting an interview call for the given job description.
                     `
 
-    const response = await getAiClient().models.generateContent({
-        model: "gemini-3-flash-preview",
-        contents: prompt,
-        config: {
-            responseMimeType: "application/json",
-            responseSchema: zodToJsonSchema(resumePdfSchema),
-        }
-    })
-
-
-    const jsonContent = JSON.parse(response.text)
+    const jsonContent = await generateJson({ prompt, schema: resumePdfSchema })
 
     const pdfBuffer = await generatePdfFromHtml(jsonContent.html)
 
